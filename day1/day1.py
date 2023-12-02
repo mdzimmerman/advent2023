@@ -1,4 +1,5 @@
 import argparse
+import logging
 import re
 
 word2digit = {
@@ -46,6 +47,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('filename')
     parser.add_argument('--part', '-p', type=int, default=1)
+    parser.add_argument('--log', '-l', choices=["debug", "info", "warning"])
     args = parser.parse_args()
+
+    # parse logging level
+    loglevel = logging.INFO
+    if args.log == "debug":
+        loglevel = logging.DEBUG
+    elif args.log == "warning":
+        loglevel = logging.WARNING
+    logging.basicConfig(level=loglevel)
 
     main(args)
