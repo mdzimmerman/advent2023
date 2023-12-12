@@ -7,6 +7,23 @@ class Point:
     y: int
 
 
+@dataclass
+class Interval:
+    start: int
+    end: int
+
+    def __len__(self):
+        return self.end - self.start
+
+    def intersect(self, other):
+        if self.end <= other.start or other.end <= self.start:
+            return None
+        else:
+            start = max(self.start, other.start)
+            end = min(self.end, other.end)
+            return Interval(start, end)
+
+
 def read_lines(filename):
     """Read in each line of a file as an element in a list"""
 
@@ -25,3 +42,5 @@ def split_xs(xs, sep):
         else:
             out[-1].append(x)
     return out
+
+

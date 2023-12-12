@@ -5,12 +5,22 @@ import sys
 
 sys.path.append("..")
 import aoc
+from aoc import Interval
+
+@dataclass
+class Function:
+    source: Interval
+    offset: int
+    dest: Interval
 
 @dataclass
 class AlmanacEntry:
     dest_start: int
     source_start: int
     range_length: int
+
+    def in_range(self, x):
+        return self.source_start <= x < self.source_start + self.range_length
 
 def indent(levels=0):
     return "  " * levels
@@ -102,6 +112,26 @@ class Almanac:
             currid = newid
         return currid
 
+    def build_functions(self, outtype, xmin, xmax):
+        map = self.maps[outtype]
+        print(xmin, xmax)
+        fs = []
+        x0 = 0
+        for e in map.entries:
+            source_range = Interval(e.source_start, e.source_start + e.range_length)
+            dest_range = Interval(e.dest_start, e.dest_start + e.range_length)
+            offset = e.dest_start - e.source_start
+            if x0 < source_range.start:
+                fs.append(Function(Interval(x0, source_range.start), 0, Interval(x0, source_range.start)))
+            fs.append(Function(source_range, offset, dest_range))
+            x0 = source_range.end
+        if x0 < xmax:
+            fs.append(Function(Interval(x0, xmax), 0, Interval(x0, xmax)))
+        for f in fs:
+            print(f)
+        return fs
+
+
 def main(args):
     almanac = Almanac(args.filename)
     locations = []
@@ -113,13 +143,59 @@ def main(args):
     print(f"part1 = {min(locations)}")
 
     #almanac.to_location(79)
-    almanac.pretty_print()
+    #almanac.pretty_print()
     #for n in range(100):
     #    print(n, almanac.maps["seed"].lookup(n))
 
     #print(almanac.seeds)
     #for k, v in almanac.maps.items():
     #    print(k, v)
+
+    def apply_piecewise(fs, gtype):
+        xmin = 0
+        xmax = max(x.dest.end for x in fs)
+        gs = almanac.build_functions(gtype, xmin, xmax)
+        print()
+        for f in fs:
+            # print(f)
+            for g in gs:
+                inter = f.dest.intersect(g.source)
+                if inter is not None:
+                    inter_offset = inter.start - f.dest.start
+                    inter_len = len(inter)
+                    source = Interval(f.source.start + inter_offset, f.source.start + inter_offset + inter_len)
+                    offset = f.offset + g.offset
+                    dest = Interval(source.start + offset, source.end + offset)
+                    fg = Function(source, offset, dest)
+                    print(fg)
+
+    print('seed')
+    fseed = almanac.build_functions('seed', 0, 100)
+    #print('soil')
+    #functs_soil = almanac.build_functions('soil')
+    apply_piecewise(fseed, 'soil')
+
+
+
+    # i = 0
+    # j = 0
+    # x0 = 0
+    # for _ in range(20):
+    #     if functs_seed[i].end == functs_soil[j].end:
+    #         x1 = functs_seed[i].end
+    #         i += 1
+    #         j += 1
+    #     elif functs_seed[i].end < functs_soil[j].end:
+    #         x1 = functs_seed[i].end
+    #         i += 1
+    #     else:
+    #         x1 = functs_soil[j].end
+    #         j += 1
+    #
+    #     x1 = min(functs_seed[i].end, functs_soil[j].end)
+    #     if functs_seed[i].end < functs_soil[j]:
+
+
 
 
 if __name__ == '__main__':
@@ -128,5 +204,5 @@ if __name__ == '__main__':
     parser.add_argument('--filename', '-f', default="input.txt")
 
     # parse logging level
-    args = parser.parse_args(['-f', 'input.txt'])
+    args = parser.parse_args(['-f', 'test.txt'])
     main(args)
