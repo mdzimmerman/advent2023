@@ -114,48 +114,31 @@ class Almanac:
 
     def build_functions(self, outtype, xmin, xmax):
         map = self.maps[outtype]
-        print(xmin, xmax)
         fs = []
-        x0 = 0
+        x0 = xmin
+        xinter = Interval(xmin, xmax)
         for e in map.entries:
-            source_range = Interval(e.source_start, e.source_start + e.range_length)
-            dest_range = Interval(e.dest_start, e.dest_start + e.range_length)
-            offset = e.dest_start - e.source_start
-            if x0 < source_range.start:
-                fs.append(Function(Interval(x0, source_range.start), 0, Interval(x0, source_range.start)))
-            fs.append(Function(source_range, offset, dest_range))
-            x0 = source_range.end
+            source_range = Interval(e.source_start, e.source_start + e.range_length).intersect(xinter)
+            if source_range is not None:
+                diff = source_range.start - e.source_start
+                dest_range = Interval(e.dest_start + diff, e.dest_start + diff + len(source_range))
+                offset = e.dest_start - e.source_start
+                if x0 < source_range.start:
+                    fs.append(Function(Interval(x0, source_range.start), 0, Interval(x0, source_range.start)))
+                fs.append(Function(source_range, offset, dest_range))
+                x0 = source_range.end
         if x0 < xmax:
             fs.append(Function(Interval(x0, xmax), 0, Interval(x0, xmax)))
-        for f in fs:
-            print(f)
+        #for f in fs:
+        #    print(f)
         return fs
 
-
-def main(args):
-    almanac = Almanac(args.filename)
-    locations = []
-    for seed in almanac.seeds:
-        location = almanac.to_location(seed)
-        locations.append(location)
-        #print(seed, location)
-
-    print(f"part1 = {min(locations)}")
-
-    #almanac.to_location(79)
-    #almanac.pretty_print()
-    #for n in range(100):
-    #    print(n, almanac.maps["seed"].lookup(n))
-
-    #print(almanac.seeds)
-    #for k, v in almanac.maps.items():
-    #    print(k, v)
-
-    def apply_piecewise(fs, gtype):
+    def apply_piecewise(self, fs, gtype):
         xmin = 0
         xmax = max(x.dest.end for x in fs)
-        gs = almanac.build_functions(gtype, xmin, xmax)
-        print()
+        gs = self.build_functions(gtype, xmin, xmax)
+        #print()
+        fgs = []
         for f in fs:
             # print(f)
             for g in gs:
@@ -167,35 +150,34 @@ def main(args):
                     offset = f.offset + g.offset
                     dest = Interval(source.start + offset, source.end + offset)
                     fg = Function(source, offset, dest)
-                    print(fg)
+                    fgs.append(fg)
+                    #print(fg)
+        return fgs
 
-    print('seed')
-    fseed = almanac.build_functions('seed', 0, 100)
-    #print('soil')
-    #functs_soil = almanac.build_functions('soil')
-    apply_piecewise(fseed, 'soil')
+    def part2(self):
+        fsall = []
+        for i in range(0, len(self.seeds), 2):
+            xmin, xlen = self.seeds[i:i+2]
+            fs = self.build_functions("seed", xmin, xmin+xlen)
+            currtype = self.maps["seed"].outtype
+            while currtype != "location":
+                fs = self.apply_piecewise(fs, currtype)
+                currtype = self.maps[currtype].outtype
+            fsall.extend(fs)
 
-
-
-    # i = 0
-    # j = 0
-    # x0 = 0
-    # for _ in range(20):
-    #     if functs_seed[i].end == functs_soil[j].end:
-    #         x1 = functs_seed[i].end
-    #         i += 1
-    #         j += 1
-    #     elif functs_seed[i].end < functs_soil[j].end:
-    #         x1 = functs_seed[i].end
-    #         i += 1
-    #     else:
-    #         x1 = functs_soil[j].end
-    #         j += 1
-    #
-    #     x1 = min(functs_seed[i].end, functs_soil[j].end)
-    #     if functs_seed[i].end < functs_soil[j]:
+        return min(f.dest.start for f in fsall)
 
 
+def main(args):
+    almanac = Almanac(args.filename)
+    locations = []
+    for seed in almanac.seeds:
+        location = almanac.to_location(seed)
+        locations.append(location)
+        #print(seed, location)
+
+    print(f"part1 = {min(locations)}")
+    print(f"part2 = {almanac.part2()}")
 
 
 if __name__ == '__main__':
@@ -204,5 +186,5 @@ if __name__ == '__main__':
     parser.add_argument('--filename', '-f', default="input.txt")
 
     # parse logging level
-    args = parser.parse_args(['-f', 'test.txt'])
+    args = parser.parse_args(['-f', 'input.txt'])
     main(args)

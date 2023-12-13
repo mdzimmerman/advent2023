@@ -22,6 +22,6 @@ if __name__ == '__main__':
         loglevel = logging.DEBUG
     elif args.log == "warning":
         loglevel = logging.WARNING
-    logging.basicConfig(level=loglevel)
+    logging.basicConfig(level=loglevel, stream=sys.stdout)
 
     main(args)
