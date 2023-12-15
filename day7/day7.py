@@ -2,7 +2,6 @@ import argparse
 from collections import namedtuple
 from functools import total_ordering
 import logging
-import re
 import sys
 
 sys.path.append("..")
@@ -19,25 +18,43 @@ class Hand:
         "7": 7,  "8": 8,  "9": 9, "T": 10, "J": 11,
         "Q": 12, "K": 13, "A": 14}
 
-    def __init__(self, hand):
+    JOKER_CARDRANKS = CARDRANKS.copy()
+    JOKER_CARDRANKS["J"] = 1
+
+    def __init__(self, hand, joker=False):
         self.hand     = hand
+        self.joker    = joker
         self.typecode = self._build_typecode()
         self.rank     = self._calc_rank()
 
     def _build_typecode(self):
         d = dict()
+        jokers = 0
         for c in self.hand:
-            if c not in d:
-                d[c] = 0
-            d[c] += 1
-        return "".join(str(i) for i in sorted(d.values(), reverse=True))
+            if self.joker and c == 'J':
+                jokers += 1
+            else:
+                if c not in d:
+                    d[c] = 0
+                d[c] += 1
+        counts = sorted(d.values(), reverse=True)
+        if jokers == 5:
+            return "5"
+        else:
+            counts[0] += jokers
+            return "".join(str(i) for i in counts)
 
     def _calc_rank(self):
         cls = self.__class__
+        cardranks = None
+        if self.joker:
+            cardranks = cls.JOKER_CARDRANKS
+        else:
+            cardranks = cls.CARDRANKS
         rank = 0
         rank += cls.TYPERANKS[self.typecode] * (10**10)
         for i in range(5):
-            rank += cls.CARDRANKS[self.hand[i]] * (10**(2*(4-i)))
+            rank += cardranks[self.hand[i]] * (10**(2*(4-i)))
         return rank
 
     def __repr__(self):
@@ -58,16 +75,12 @@ class Hand:
 
 Input = namedtuple("Input", "hand bid")
 
-def part1(inputs):
-    for inp in sorted(inputs, key=lambda x: x.hand):
-        pass
-
-def main(args):
-    lines = aoc.read_lines(args.filename)
+def play_game(filename, joker=False):
+    lines = aoc.read_lines(filename)
     inputs = []
     for l in lines:
         ls = l.split()
-        inputs.append(Input(Hand(ls[0]), int(ls[1])))
+        inputs.append(Input(Hand(ls[0], joker=joker), int(ls[1])))
 
     #for i, x in enumerate(inputs):
     #    for j, y in enumerate(inputs[i:]):
@@ -77,7 +90,11 @@ def main(args):
     for i, inp in enumerate(sorted(inputs, key=lambda x: x.hand)):
         logging.debug(inp)
         total += (i+1) * inp.bid
-    print(f"part1 = {total}")
+    return total
+
+def main(args):
+    print(f"part1 = {play_game(args.filename, joker=False)}")
+    print(f"part2 = {play_game(args.filename, joker=True)}")
 
 
 if __name__ == '__main__':
