@@ -9,16 +9,21 @@ import aoc
 class Record:
     def __init__(self, template, counts):
         self.template = template
-        self.counts = [int(x) for x in counts.split(",")]
-        self.unknown = len(list(filter(lambda x: x == "?", template)))
-        self.total = sum(self.counts)
+        self.pos_counts = [int(x) for x in counts.split(",")]
+        self.tmpl_unk = len(list(filter(lambda x: x == "?", self.template)))
+        self.tmpl_pos = len(list(filter(lambda x: x == "#", self.template)))
+        self.pos_total = sum(self.pos_counts)
 
     def __repr__(self, ):
         cls = self.__class__.__name__
-        return f"{cls}(template={self.template} counts={self.counts})"
+        return f"{cls}(template={self.template} pos_counts={self.pos_counts})"
 
     def gen_candidates(self):
-        pass
+        pos_needed = self.pos_total - self.tmpl_pos
+        neg_needed = self.tmpl_unk - pos_needed
+        for p in permute(pos_needed, neg_needed):
+            #print(p)
+            print(self.fill_template(p))
 
     def fill_template(self, smissing):
         out = ""
@@ -76,6 +81,7 @@ def main(args):
     #print(max_unknown)
 
     print(rs[0])
+    rs[0].gen_candidates()
 
 if __name__ == '__main__':
     # parse arguments
