@@ -10,6 +10,7 @@ class Record:
     def __init__(self, template, counts):
         self.template = template
         self.pos_counts = [int(x) for x in counts.split(",")]
+        self.pos_counts_str = counts
         self.tmpl_unk = len(list(filter(lambda x: x == "?", self.template)))
         self.tmpl_pos = len(list(filter(lambda x: x == "#", self.template)))
         self.pos_total = sum(self.pos_counts)
@@ -18,12 +19,19 @@ class Record:
         cls = self.__class__.__name__
         return f"{cls}(template={self.template} pos_counts={self.pos_counts})"
 
+    def count_candidates(self):
+        return sum(1 for _ in self.gen_candidates())
+
     def gen_candidates(self):
         pos_needed = self.pos_total - self.tmpl_pos
         neg_needed = self.tmpl_unk - pos_needed
         for p in permute(pos_needed, neg_needed):
             #print(p)
-            print(self.fill_template(p))
+            cand = self.fill_template(p)
+            cand_counts_str = ",".join(str(x) for x in self.count(cand))
+            if cand_counts_str == self.pos_counts_str:
+                yield cand
+                #print(cand)
 
     def fill_template(self, smissing):
         out = ""
@@ -34,6 +42,21 @@ class Record:
             else:
                 out += c
         return out
+
+    def count(self, candidate):
+        counts = []
+        ingroup = False
+        for c in candidate:
+            if ingroup:
+                if c == "#":
+                    counts[-1] += 1
+                else:
+                    ingroup = False
+            else:
+                if c == "#":
+                    counts.append(1)
+                    ingroup = True
+        return counts
 
     @classmethod
     def fromfile(cls, filename):
@@ -80,8 +103,12 @@ def main(args):
     #        max_unknown = r.unknown
     #print(max_unknown)
 
-    print(rs[0])
-    rs[0].gen_candidates()
+    ntotal = 0
+    for r in rs:
+        ncand = r.count_candidates()
+        ntotal += ncand
+        print(r, ncand)
+    print(ntotal)
 
 if __name__ == '__main__':
     # parse arguments
