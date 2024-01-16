@@ -40,7 +40,7 @@ class Grid:
         self.grid = list(grid)
         self.width = len(self.grid[0])
         self.height = len(self.grid)
-        self.loop_max_steps, self.loop = self.bfs(self.findstart(), get_next_impl="loop")
+        self.loop_max_steps, self.loop = self.bfs_loop()
 
     def expand(self):
         expandx = []
@@ -130,13 +130,13 @@ class Grid:
                 out.append(np)
         return out
 
-    def bfs(self, start, get_next_impl="loop"):
-        get_next = None
-        if get_next_impl == "loop":
-            get_next = lambda p: self.get_next_loop(p)
-        elif get_next_impl == "ground":
-            get_next = lambda p: self.get_next_ground(p)
+    def bfs_loop(self):
+        return self.bfs(self.findstart(), get_next=lambda p: self.get_next_loop(p))
 
+    def bfs_ground(self, start):
+        return self.bfs(start, get_next=lambda p: self.get_next_ground(p))
+
+    def bfs(self, start, get_next):
         maxsteps = 0
         visited = set()
         queue = []
@@ -182,7 +182,7 @@ class Grid:
             for i, c in enumerate(self.grid[j]):
                 p = Point(i, j)
                 if p not in self.loop and not any(p in r for r in regions):
-                    _, rnew = self.bfs(p, get_next_impl="ground")
+                    _, rnew = self.bfs_ground(p)
                     regions.append(rnew)
         inset, outset = set(), set()
         for r in regions:
