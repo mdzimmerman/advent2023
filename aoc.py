@@ -37,6 +37,9 @@ def read_lines(filename):
             lines.append(l.rstrip())
     return lines
 
+def read_string(filename):
+    return "".join(read_lines(filename))
+
 def split_xs(xs, sep):
     """Split the iterable xs on the separator sep"""
     out = [[]]
