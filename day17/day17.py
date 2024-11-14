@@ -9,7 +9,7 @@ sys.path.append("..")
 import aoc
 from aoc import Point
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, order=True)
 class State:
     loss: int
     point: Point = field(compare=False)
@@ -22,37 +22,77 @@ class Grid:
         self.width = data.shape[0]
         self.height = data.shape[1]
 
-    def neighbors(self, state: State):
-        nextdirs = []
+    def nextdir(self, state: State, crucible: str='normal'):
+        if crucible == 'normal':
+            return self.nextdir_normal(state)
+        elif crucible == 'ultra':
+            return self.nextdir_ultra(state)
+        else:
+            raise Exception('bad crucible type')
+    
+    def nextdir_normal(self, state: State):
+        out = []
         if state.dir == 'E' or state.dir == 'W':
-            nextdirs.append('N')
-            nextdirs.append('S')
+            out.append('N')
+            out.append('S')
         elif state.dir == 'N' or state.dir == 'S':
-            nextdirs.append('E')
-            nextdirs.append('S')
+            out.append('E')
+            out.append('W')
         if state.n < 3:
-            nextdirs.append(state.dir)
-        for ndir in nextdirs:
+            out.append(state.dir)
+        return out
+
+    def nextdir_ultra(self, state: State):
+        out = []
+        if state.n < 10:
+            out.append(state.dir)
+        if state.n >= 4:
+            if state.dir == 'E' or state.dir == 'W':
+                out.append('N')
+                out.append('S')
+            elif state.dir == 'N' or state.dir == 'S':
+                out.append('E')
+                out.append('W')
+        return out
+    
+    def neighbors(self, state: State, crucible='normal'):
+        for ndir in self.nextdir(state, crucible):
             npoint = state.point.move(ndir)
             if npoint.x < 0 or npoint.y < 0 or npoint.x >= self.width or npoint.y >= self.height:
                 continue
-            nn = 1
-            if ndir == dir:
+            nloss = state.loss + self.data[npoint.y, npoint.x]                
+            nn = None
+            if ndir == state.dir:
                 nn = state.n + 1
-            nloss = state.loss + self.data[npoint.y, npoint.x]
+            else:
+                nn = 1
             yield State(nloss, npoint, ndir, nn)
 
-    def dijkstra(self):
-        start = State(0, Point(0, 0), 'E', 0)
-
+    def dijkstra(self, start=None, end=None, crucible='normal'):
+        if start == None:
+            start = Point(0, 0)
+        if end == None:
+            end = Point(self.width-1, self.height-1)
+        startstate = State(0, start, 'E', 0)
+        
         visited = set()
-        visited.add(start.point)
 
         pq = queue.PriorityQueue()
-        pq.put(start)
+        pq.put(startstate)
 
         while not pq.empty():
-            pass
+            state = pq.get()
+            #print(state)
+
+            if state.point == end:
+                return state
+
+            if (state.point, state.dir, state.n) in visited:
+                continue
+            visited.add((state.point, state.dir, state.n))
+            
+            for nstate in self.neighbors(state, crucible):
+                pq.put(nstate)
 
     @classmethod
     def fromfile(cls, filename):
@@ -63,7 +103,6 @@ class Grid:
                 data.append([int(x) for x in l])
         return Grid(np.array(data))
 
-
 def main(args):
     grid = Grid.fromfile(args.filename)
     print(grid.data)
@@ -72,7 +111,8 @@ def main(args):
 
     s1 = State(0, Point(0, 0), 'E', 0)
     print(list(grid.neighbors(s1)))
-
+    print(grid.dijkstra())
+    print(grid.dijkstra(crucible='ultra'))
 
 if __name__ == '__main__':
     # parse arguments
