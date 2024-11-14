@@ -11,6 +11,18 @@ class Point:
             raise TypeError
         return Point(self.x + other.x, self.y + other.y)
 
+    def move(self, dir):
+        if dir == 'N':
+            return Point(self.x, self.y-1)
+        elif dir == 'E':
+            return Point(self.x+1, self.y)
+        elif dir == 'S':
+            return Point(self.x, self.y+1)
+        elif dir == 'W':
+            return Point(self.x-1, self.y)
+        else:
+            raise Exception(f"bad direction {dir}")
+
 @dataclass
 class Interval:
     start: int
