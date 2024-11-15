@@ -10,9 +10,7 @@ class Dir(Enum):
 
     @classmethod
     def fromstr(cls, s):
-        return cls[s]
-        
-        
+        return cls[s]        
 
 @dataclass(frozen=True)
 class Point:
@@ -24,6 +22,18 @@ class Point:
             raise TypeError
         return Point(self.x + other.x, self.y + other.y)
 
+    def movedir(self, dir: Dir):
+        if dir == Dir.U:
+            return Point(self.x, self.y-1)
+        elif dir == Dir.R:
+            return Point(self.x+1, self.y)
+        elif dir == Dir.D:
+            return Point(self.x, self.y+1)
+        elif dir == Dir.L:
+            return Point(self.x-1, self.y)
+        else:
+            raise Exception(f"bad direction {dir}")
+    
     def move(self, dir):
         if dir == 'N':
             return Point(self.x, self.y-1)
