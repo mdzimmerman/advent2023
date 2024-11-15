@@ -1,5 +1,18 @@
 from dataclasses import dataclass
 from collections import namedtuple
+from enum import Enum
+
+class Dir(Enum):
+    U = 0
+    R = 1
+    D = 2
+    L = 3
+
+    @classmethod
+    def fromstr(cls, s):
+        return cls[s]
+        
+        
 
 @dataclass(frozen=True)
 class Point:
