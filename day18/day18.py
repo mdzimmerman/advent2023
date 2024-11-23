@@ -1,6 +1,6 @@
 import argparse
+from collections import deque
 from dataclasses import dataclass
-import logging
 import numpy as np
 import re
 import sys
@@ -14,7 +14,7 @@ class DigEntry:
     dist: int
     color: str
 
-    pattern = re.compile(r"(.) (\d) \((.+)\)")
+    pattern = re.compile(r"(.) (\d+) \((.+)\)")
     
     @classmethod
     def from_string(cls, s):
@@ -74,19 +74,55 @@ class DigPlan:
                     entries.append(e)
         return cls(entries)
 
+    def part1(self):
+        grid = self.to_array()
+        array_ymax, array_xmax = grid.shape
+        print(array_ymax * array_xmax)
+        #print(array_ymax, array_xmax)
+
+        queue = deque()
+        queue.append(Point(array_xmax//2, array_ymax//2))
+
+        i = 0
+        while len(queue):
+            p = queue.popleft()
+            if grid[p.y, p.x] == 2:
+                continue
+            grid[p.y, p.x] = 2
+            #print(p)
+            i += 1
+            #if (i % 100) == 0:
+            #    print(i)
+            for d in Dir.U, Dir.R, Dir.D, Dir.L:
+                pn = p.movedir(d)
+                if 0 <= pn.x < array_xmax \
+                    and 0 <= pn.y < array_ymax \
+                    and grid[pn.y, pn.x] == 0:
+                    queue.append(pn)
+
+        print(np.count_nonzero(grid > 0))
+        return grid
+
+        #n_tot = array_xmax * array_ymax
+        #n_ext = len(visited)
+        #n_int = n_tot - n_ext
+        #print(n_tot, n_ext, n_int)
+
+
 def main(args):
     #print(args)
-    plan = DigPlan.from_file(args.filename)
+    plan = DigPlan.from_file("input.txt")
     #for e in plan.entries:
     #    print(e)
     print(f"x = {plan.xmin}..{plan.xmax}")
     print(f"y = {plan.ymin}..{plan.ymax}")
-    plan.print_trench()
+    #plan.print_trench()
+    plan.part1()
 
 if __name__ == '__main__':
     # parse arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('--filename', '-f', default="input.txt")
+    parser.add_argument('--filename', '-f', default="test.txt")
     args = parser.parse_args()
 
     # parse logging level
