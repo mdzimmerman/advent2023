@@ -30,6 +30,16 @@ class Workflow:
 
     PATTERN = re.compile(r"(\w+){(.+),(\w+)}")
 
+    def eval(self, part):
+        for rule in self.rules:
+            if rule.op == '>':
+                if part[rule.prop] > rule.value:
+                    return rule.dest
+            elif rule.op == '<':
+                if part[rule.prop] < rule.value:
+                    return rule.dest
+        return self.altdest
+
     @classmethod
     def parse(cls, s):
         m = cls.PATTERN.match(s)
@@ -53,8 +63,39 @@ class Part:
                 if mx:
                     out[mx.group(1)] = int(mx.group(2))
             return out
+class System:
+    def __init__(self, workflows, parts):
+        self.workflows = {w.name: w for w in workflows}
+        self.parts = parts
+
+    def part1(self):
+        accept = []
+        reject = []
+
+        for p in self.parts:
+            current = 'in'
+            while current != 'A' and current != 'R':
+                workflow = self.workflows[current]
+                current = workflow.eval(p)
+                #print(current)
+            #print(p)
+            if current == 'A':
+                accept.append(p)
+            elif current == 'R':
+                reject.append(p)
+
+        return sum(sum(p.values()) for p in accept)
+
+    @classmethod
+    def read_file(cls, filename):
+        ws, ps = aoc.split_xs(aoc.read_lines(filename), "")
+        workflows = [Workflow.parse(w) for w in ws]
+        parts = [Part.parse(p) for p in ps]
+        return cls(workflows, parts)
+
 def main(args):
     print(args)
+
 
 if __name__ == '__main__':
     # parse arguments
