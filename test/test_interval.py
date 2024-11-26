@@ -15,4 +15,3 @@ class TestInterval(TestCase):
         self.assertEqual(b.intersect(a), Interval(2, 3))
         self.assertIsNone(a.intersect(c))
         self.assertIsNone(c.intersect(a))
-

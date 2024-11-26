@@ -51,8 +51,22 @@ class Interval:
     start: int
     end: int
 
+    def __repr__(self):
+        return f"{self.start}-{self.end}"
+
     def __len__(self):
         return self.end - self.start
+
+    def count(self):
+        return self.end - self.start + 1
+
+    def split(self, at):
+        if at <= self.start:
+            return None, Interval(self.start, self.end)
+        elif self.start < at <= self.end:
+            return Interval(self.start, at-1), Interval(at, self.end)
+        else:
+            return Interval(self.start, self.end), None
 
     def intersect(self, other):
         if self.end <= other.start or other.end <= self.start:
@@ -62,6 +76,37 @@ class Interval:
             end = min(self.end, other.end)
             return Interval(start, end)
 
+@dataclass
+class IntervalSeq:
+    intervals: list[Interval]
+
+    @classmethod
+    def build(cls, xs):
+        out = []
+        it = iter(xs)
+        for x, y in zip(it, it):
+            out.append(Interval(x, y))
+        return IntervalSeq(out)
+
+    def __repr__(self):
+        return f"[{','.join(str(x) for x in self.intervals)}]"
+
+    def append(self, x: Interval):
+        self.intervals.append(x)
+
+    def count(self):
+        return sum(x.count() for x in self.intervals)
+
+    def split(self, at: int):
+        a = IntervalSeq([])
+        b = IntervalSeq([])
+        for x in self.intervals:
+            xa, xb = x.split(at)
+            if xa is not None:
+                a.append(xa)
+            if xb is not None:
+                b.append(xb)
+        return a, b
 
 def read_lines(filename):
     """Read in each line of a file as an element in a list"""

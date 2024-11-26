@@ -1,11 +1,11 @@
 import argparse
 from dataclasses import dataclass
-import logging
 import re
 import sys
 
 sys.path.append("..")
 import aoc
+from aoc import IntervalSeq, Interval
 
 @dataclass
 class Rule:
@@ -40,6 +40,14 @@ class Workflow:
                     return rule.dest
         return self.altdest
 
+    def evalrange(self, partrange: dict[str, IntervalSeq]):
+        x = partrange.copy()
+        for rule in self.rules:
+            if rule.op == '<':
+                a, b = partrange[rule.prop].split(rule.value)
+                if a.count():
+                    pass
+
     @classmethod
     def parse(cls, s):
         m = cls.PATTERN.match(s)
@@ -63,6 +71,14 @@ class Part:
                 if mx:
                     out[mx.group(1)] = int(mx.group(2))
             return out
+
+@dataclass
+class PartRange:
+    data: dict[str, list[int]]
+
+    def split(self, prop: str, at: int):
+        pass
+
 class System:
     def __init__(self, workflows, parts):
         self.workflows = {w.name: w for w in workflows}
@@ -93,23 +109,17 @@ class System:
         parts = [Part.parse(p) for p in ps]
         return cls(workflows, parts)
 
-def main(args):
-    print(args)
-
-
 if __name__ == '__main__':
     # parse arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('--filename', '-f', default="input.txt")
-    parser.add_argument('--log', '-l', choices=["debug", "info", "warning"])
     args = parser.parse_args()
 
-    # parse logging level
-    loglevel = logging.INFO
-    if args.log == "debug":
-        loglevel = logging.DEBUG
-    elif args.log == "warning":
-        loglevel = logging.WARNING
-    logging.basicConfig(level=loglevel, stream=sys.stdout)
+    from aoc import IntervalSeq
+    inter = IntervalSeq.build([1, 10, 15, 20])
+    for i in range(0, 22):
+        a, b = inter.split(i)
+        print(a, a.count(), b, b.count())
 
-    main(args)
+    test = System.read_file("input.txt")
+    print(test.part1())
+
