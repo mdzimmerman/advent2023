@@ -1,6 +1,4 @@
-import argparse
 from dataclasses import dataclass
-import logging
 import re
 import sys
 
@@ -63,6 +61,64 @@ class Part:
                 if mx:
                     out[mx.group(1)] = int(mx.group(2))
             return out
+
+class PartRange:
+    KEYS = ['x', 'm', 'a', 's']
+
+    def __init__(self, **kwargs):
+        self.data = dict()
+        for k, v in kwargs.items():
+            if k in self.__class__.KEYS:
+                self.data[k] = v
+
+    def __getitem__(self, key):
+        if key in self.__class__.KEYS:
+            return dict.__getitem__(self.data, key)
+
+    def __setitem__(self, key, val):
+        if key in self.__class__.KEYS:
+            return dict.__setitem__(self.data, key, val)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.data})"
+
+    def _filter_bad_range(self, pr):
+        for k in self.__class__.KEYS:
+            if not pr[k]:
+                return None
+        return pr
+
+    def ncombos(self):
+        out = 1
+        for k in self.__class__.KEYS:
+            it = iter(self.data[k])
+            count = 0
+            for xmin, xmax in zip(it, it):
+                count += (xmax-xmin+1)
+            out *= count
+        return out
+
+    def split(self, key, value):
+        a = PartRange()
+        b = PartRange()
+        for k in self.__class__.KEYS:
+            if k == key:
+                a[k] = []
+                b[k] = []
+                it = iter(self.data[k])
+                for xmin, xmax in zip(it, it):
+                    if value <= xmin:
+                        a[k].extend([xmin, xmax])
+                    elif xmin < value <= xmax:
+                        a[k].extend([xmin, value-1])
+                        b[k].extend([value, xmax])
+                    else:
+                        b[k].extend([xmin, xmax])
+            else:
+                a[k] = self.data[k][:]
+                b[k] = self.data[k][:]
+        return self._filter_bad_range(a), self._filter_bad_range(b)
+
 class System:
     def __init__(self, workflows, parts):
         self.workflows = {w.name: w for w in workflows}
@@ -93,23 +149,16 @@ class System:
         parts = [Part.parse(p) for p in ps]
         return cls(workflows, parts)
 
-def main(args):
-    print(args)
-
-
 if __name__ == '__main__':
-    # parse arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--filename', '-f', default="input.txt")
-    parser.add_argument('--log', '-l', choices=["debug", "info", "warning"])
-    args = parser.parse_args()
-
-    # parse logging level
-    loglevel = logging.INFO
-    if args.log == "debug":
-        loglevel = logging.DEBUG
-    elif args.log == "warning":
-        loglevel = logging.WARNING
-    logging.basicConfig(level=loglevel, stream=sys.stdout)
-
-    main(args)
+    part = PartRange(x=[1,4000], m=[1,4000], a=[1,4000], s=[1, 4000])
+    for v in [1, 2000, 4000, 4001]:
+        print(v)
+        a, b = part.split('a', v)
+        an = 0
+        if a is not None:
+            an = a.ncombos()
+        bn = 0
+        if b is not None:
+            bn = b.ncombos()
+        print(f"    {a} {an}")
+        print(f"    {b} {bn}")
