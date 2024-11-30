@@ -4,6 +4,7 @@ from collections import deque
 
 sys.path.append("..")
 import aoc
+from aoc import AocLogging
 
 class Module:
     LOW = 0
@@ -42,16 +43,16 @@ class FlipFlop(Module):
 
     def handle_pulse(self, inp, pulse):
         if pulse == 1:
-            return None
+            return []
         elif pulse == 0:
             if self.state == 0:
                 self.state = 1
-                return [(self.name, out, Module.HIGH) for out in self.outputs]
+                return [(self.name, out, 1) for out in self.outputs]
             else:
                 self.state = 0
-                return [(self.name, out, Module.LOW) for out in self.outputs]
+                return [(self.name, out, 0) for out in self.outputs]
         else:
-            return None
+            return []
 
 class Conjunction(Module):
     def __init__(self, name: str, outputs: list[str]):
@@ -61,10 +62,10 @@ class Conjunction(Module):
     def handle_pulse(self, inp, pulse):
         self.last_inputs[inp] = pulse
         pulse_out = None
-        if sum(self.last_inputs.values()) == len(self.outputs):
-            pulse_out = Module.LOW
+        if sum(self.last_inputs.values()) == len(self.inputs):
+            pulse_out = 0
         else:
-            pulse_out = Module.HIGH
+            pulse_out = 1
         return [(self.name, out, pulse_out) for out in self.outputs]
 
 class Broadcaster(Module):
@@ -74,10 +75,22 @@ class Broadcaster(Module):
     def handle_pulse(self, inp, pulse):
         return [(self.name, out, pulse) for out in self.outputs]
 
-class System:
-    def __init__(self, instructions: list[str]):
+class System(AocLogging):
+    def __init__(self, instructions: list[str], level=AocLogging.WARN):
+        super().__init__(level=level)
         self.instructions: list[str] = instructions
         self.modules: dict[str, Module] = self._build_modules(self.instructions)
+
+    def state(self):
+        out = dict()
+        for k, m in self.modules.items():
+            if isinstance(m, FlipFlop):
+                out[k] = m.state
+        return tuple(sorted(out.items()))
+
+    def print_modules(self):
+        for k, m in self.modules.items():
+            print(f"{k} => {m}")
 
     def _build_modules(self, instructions: list[str]):
         modules: dict[str, Module] = dict()
@@ -96,25 +109,59 @@ class System:
                 m.inputs = inputs[k]
         return modules
 
-    def evaluate(self, inp0, out0, pulse0):
+    def evaluate(self, inp0='button', out0='broadcaster', pulse0=0):
         queue = deque()
         queue.append((inp0, out0, pulse0))
 
+        nlow, nhigh = 0, 0
         while queue:
             inp, out, pulse = queue.popleft()
-            print(f"{inp} -{pulse}-> {out}")
-            for i, o, p in self.modules[out].handle_pulse(inp, pulse):
-                queue.append((i, o, p))
+            if pulse == 1:
+                nhigh += 1
+            else:
+                nlow += 1
+            self.debug(f"{inp} -{pulse}-> {out}")
+            if out in self.modules:
+                for i, o, p in self.modules[out].handle_pulse(inp, pulse):
+                    queue.append((i, o, p))
+        return nlow, nhigh
 
+    def part1(self):
+        nlowtotal = 0
+        nhightotal = 0
+        for _ in range(1000):
+            nlow, nhigh = self.evaluate()
+            nlowtotal += nlow
+            nhightotal += nhigh
+        self.info(nlowtotal, nhightotal)
+        return nlowtotal * nhightotal
 
     @classmethod
-    def from_file(cls, filename):
-        return cls(aoc.read_lines(filename))
+    def from_file(cls, filename, level=AocLogging.WARN):
+        return cls(aoc.read_lines(filename), level=level)
 
 
 if __name__ == '__main__':
-    test1 = System.from_file("test1.txt")
-    for k, m in test1.modules.items():
-        print(k, m)
+    print("-- test1 --")
+    test1 = System.from_file("test1.txt", level=AocLogging.DEBUG)
+    test1.print_modules()
     print()
-    test1.evaluate("button", "broadcaster", Module.LOW)
+    print(test1.evaluate())
+
+    print()
+    print("-- test2 --")
+    test2 = System.from_file("test2.txt", level=AocLogging.DEBUG)
+    test2.print_modules()
+    print(test2.state())
+    for _ in range(4):
+        print()
+        print(test2.evaluate())
+        print(test2.state())
+
+    test2b = System.from_file('test2.txt')
+    print(test2b.part1())
+
+    print()
+    print("-- input --")
+    inp = System.from_file("input.txt")
+    print(inp.part1())
