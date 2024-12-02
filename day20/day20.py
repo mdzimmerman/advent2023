@@ -114,6 +114,7 @@ class System(AocLogging):
         queue.append((inp0, out0, pulse0))
 
         nlow, nhigh = 0, 0
+        outputs = {}
         while queue:
             inp, out, pulse = queue.popleft()
             if pulse == 1:
@@ -124,13 +125,17 @@ class System(AocLogging):
             if out in self.modules:
                 for i, o, p in self.modules[out].handle_pulse(inp, pulse):
                     queue.append((i, o, p))
-        return nlow, nhigh
+            else:
+                if out not in outputs:
+                    outputs[out] = []
+                outputs[out].append(pulse)
+        return nlow, nhigh, outputs
 
     def part1(self):
         nlowtotal = 0
         nhightotal = 0
         for _ in range(1000):
-            nlow, nhigh = self.evaluate()
+            nlow, nhigh, _ = self.evaluate()
             nlowtotal += nlow
             nhightotal += nhigh
         self.info(nlowtotal, nhightotal)
@@ -164,4 +169,10 @@ if __name__ == '__main__':
     print()
     print("-- input --")
     inp = System.from_file("input.txt")
-    print(inp.part1())
+    #print(inp.part1())
+    for i in range(10_000_000):
+        if (i % 10_000) == 0:
+            print(i)
+        _, _, outputs = inp.evaluate()
+        if outputs["rx"][0] == 0:
+            print(i, outputs)
