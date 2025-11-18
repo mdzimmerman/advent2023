@@ -1,6 +1,26 @@
 from dataclasses import dataclass
-from collections import namedtuple
 from enum import Enum
+
+class AocLogging:
+    WARN = 0
+    INFO = 1
+    DEBUG = 2
+
+    def __init__(self, level=WARN):
+        self.level = level
+
+    def _print_logging(self, level, *args):
+        if self.level >= level:
+            print(*args)
+
+    def warn(self, *args):
+        self._print_logging(0, "[WARN]", *args)
+
+    def info(self, *args):
+        self._print_logging(1, "[INFO]", *args)
+
+    def debug(self, *args):
+        self._print_logging(2, "[DEBUG]", *args)
 
 class Dir(Enum):
     U = 0

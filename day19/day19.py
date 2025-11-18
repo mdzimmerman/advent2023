@@ -1,9 +1,11 @@
+from collections import deque
 from dataclasses import dataclass
 import re
 import sys
 
 sys.path.append("..")
 import aoc
+from aoc import AocLogging
 
 @dataclass
 class Rule:
@@ -38,13 +40,15 @@ class Workflow:
                     return rule.dest
         return self.altdest
 
-    def evalrange(self, partrange: PartRange):
-        //x = partrange.copy()
+    def evalrange(self, part):
+        out = []
+        curr = part
         for rule in self.rules:
-            if rule.op == '<':
-                a, b = partrange
-                if a.count():
-                    pass
+            yes, no = curr.split(rule.prop, rule.op, rule.value)
+            out.append((rule.dest, yes))
+            curr = no
+        out.append((self.altdest, curr))
+        return out
 
     @classmethod
     def parse(cls, s):
@@ -106,29 +110,40 @@ class PartRange:
             out *= count
         return out
 
-    def split(self, key, value):
-        a = PartRange()
-        b = PartRange()
+    def split(self, key, op, value):
+        yes = PartRange()
+        no  = PartRange()
         for k in self.__class__.KEYS:
             if k == key:
-                a[k] = []
-                b[k] = []
+                yes[k] = []
+                no[k]  = []
                 it = iter(self.data[k])
-                for xmin, xmax in zip(it, it):
-                    if value <= xmin:
-                        a[k].extend([xmin, xmax])
-                    elif xmin < value <= xmax:
-                        a[k].extend([xmin, value-1])
-                        b[k].extend([value, xmax])
-                    else:
-                        b[k].extend([xmin, xmax])
+                if op == '<':
+                    for xmin, xmax in zip(it, it):
+                        if value <= xmin:
+                            yes[k].extend([xmin, xmax])
+                        elif xmin < value <= xmax:
+                            yes[k].extend([xmin, value-1])
+                            no[k].extend([value, xmax])
+                        else:
+                            no[k].extend([xmin, xmax])
+                elif op == '>':
+                    for xmin, xmax in zip(it, it):
+                        if value < xmin:
+                            no[k].extend([xmin, xmax])
+                        elif xmin <= value < xmax:
+                            yes[k].extend([value+1, xmax])
+                            no[k].extend([xmin, value])
+                        else:
+                            yes[k].extend([xmin, xmax])
             else:
-                a[k] = self.data[k][:]
-                b[k] = self.data[k][:]
-        return self._filter_bad_range(a), self._filter_bad_range(b)
+                yes[k] = self.data[k][:]
+                no[k] = self.data[k][:]
+        return yes, no
 
-class System:
-    def __init__(self, workflows, parts):
+class System(AocLogging):
+    def __init__(self, workflows, parts, level=AocLogging.WARN):
+        super().__init__(level=level)
         self.workflows = {w.name: w for w in workflows}
         self.parts = parts
 
@@ -150,23 +165,85 @@ class System:
 
         return sum(sum(p.values()) for p in accept)
 
+    def part2(self):
+        allpart = PartRange(x=[1,4000], m=[1,4000], a=[1,4000], s=[1,4000])
+
+        queue = deque()
+        queue.append(("in", allpart))
+
+        accept = []
+        reject = []
+        while queue:
+            flow, part = queue.popleft()
+            self.debug(flow, part)
+            if flow == 'A':
+                accept.append(part)
+            elif flow == 'R':
+                reject.append(part)
+            else:
+                workflow = self.workflows[flow]
+                for f, p in workflow.evalrange(part):
+                    queue.append((f, p))
+
+        self.debug("rejected:")
+        cr = 0
+        for r in reject:
+            cr += r.ncombos()
+            self.debug(f"  {r} {r.ncombos()}")
+
+        ca = 0
+        self.debug("accepted:")
+        for a in accept:
+            ca += a.ncombos()
+            self.debug(f"  {a} {a.ncombos()}")
+
+        cmax = allpart.ncombos()
+        #print(cmax)
+        #print(ca + cr)
+        #print(cmax - (ca+cr))
+        #print(ca + (cmax-(ca+cr)))
+
+        #print()
+        return ca
+
     @classmethod
-    def read_file(cls, filename):
+    def read_file(cls, filename, level=aoc.AocLogging.WARN):
         ws, ps = aoc.split_xs(aoc.read_lines(filename), "")
         workflows = [Workflow.parse(w) for w in ws]
         parts = [Part.parse(p) for p in ps]
-        return cls(workflows, parts)
+        return cls(workflows, parts, level=level)
 
 if __name__ == '__main__':
+    logger = AocLogging(level=AocLogging.WARN)
     part = PartRange(x=[1,4000], m=[1,4000], a=[1,4000], s=[1, 4000])
     for v in [1, 2000, 4000, 4001]:
-        print(v)
-        a, b = part.split('a', v)
+        logger.debug(v)
+        a, b = part.split('a', '<', v)
         an = 0
         if a is not None:
             an = a.ncombos()
         bn = 0
         if b is not None:
             bn = b.ncombos()
-        print(f"    {a} {an}")
-        print(f"    {b} {bn}")
+        logger.debug(f"    {a} {an}")
+        logger.debug(f"    {b} {bn}")
+
+    logger.debug()
+    workflow = Workflow.parse("in{a>1000:out1,m<1000:out2,x>4000:out3,out4}")
+    logger.debug(workflow)
+    for k, v in workflow.evalrange(part):
+        logger.debug(k, v)
+
+    test = System.read_file("test.txt", level=AocLogging.WARN)
+    inp  = System.read_file("input.txt", level=AocLogging.WARN)
+
+    print("-- part #1 --")
+    print("test =", test.part1())
+    print("inp  =", inp.part1())
+
+    print()
+    print("-- part #2 --")
+    print("test =", test.part2())
+    print("inp  =", inp.part2())
+
+    print()
