@@ -30,22 +30,21 @@ class DigPlan:
 
     def _build_trench(self):
         points = list()
-        currpoint = Point(0, 0)
-        points.append((0, 0))
-        self.segments = list()
+        currpoint = Point(0.5, 0.5)
+        points.append((currpoint.x, currpoint.y))
+        segments = list()
         
         for e in self.entries:
-            dist = e.dist
             oldpoint = currpoint
-            currpoint = currpoint.movedir(dir=e.dir, d=dist)
+            currpoint = currpoint.movedir(dir=e.dir, d=e.dist)
             l = shapely.geometry.LineString([(oldpoint.x, oldpoint.y), (currpoint.x, currpoint.y)])
-            self.segments.append(shapely.buffer(l, 0.5, cap_style="square"))
-            print(e, currpoint)
+            segments.append(shapely.buffer(l, 0.5, cap_style="square"))
+            #print(e, currpoint)
             points.append((currpoint.x, currpoint.y))
 
-        #print(points)
-        
-        self.trench = shapely.geometry.Polygon(points)
+    
+        self.trench = shapely.union_all(segments)
+        self.trencharea = shapely.geometry.Polygon(self.trench.exterior)
 
     def print_trench(self):
         for y in range(self.ymin, self.ymax+1):
