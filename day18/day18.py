@@ -7,6 +7,7 @@ import sys
 
 sys.path.append("..")
 from aoc import Dir, Point
+import shapely
 
 @dataclass
 class DigEntry:
@@ -28,19 +29,23 @@ class DigPlan:
         self._build_trench()
 
     def _build_trench(self):
-        self.trench = set()
+        points = list()
         currpoint = Point(0, 0)
-        self.trench.add(currpoint)
+        points.append((0, 0))
+        self.segments = list()
         
         for e in self.entries:
-            for _ in range(e.dist):
-                currpoint = currpoint.movedir(e.dir)
-                self.trench.add(currpoint)
+            dist = e.dist
+            oldpoint = currpoint
+            currpoint = currpoint.movedir(dir=e.dir, d=dist)
+            l = shapely.geometry.LineString([(oldpoint.x, oldpoint.y), (currpoint.x, currpoint.y)])
+            self.segments.append(shapely.buffer(l, 0.5, cap_style="square"))
+            print(e, currpoint)
+            points.append((currpoint.x, currpoint.y))
 
-        self.xmin = min(p.x for p in self.trench)
-        self.xmax = max(p.x for p in self.trench)
-        self.ymin = min(p.y for p in self.trench)
-        self.ymax = max(p.y for p in self.trench)
+        #print(points)
+        
+        self.trench = shapely.geometry.Polygon(points)
 
     def print_trench(self):
         for y in range(self.ymin, self.ymax+1):

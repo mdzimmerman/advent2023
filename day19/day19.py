@@ -1,11 +1,9 @@
-import argparse
 from dataclasses import dataclass
 import re
 import sys
 
 sys.path.append("..")
 import aoc
-from aoc import IntervalSeq, Interval
 
 @dataclass
 class Rule:
@@ -40,11 +38,11 @@ class Workflow:
                     return rule.dest
         return self.altdest
 
-    def evalrange(self, partrange: dict[str, IntervalSeq]):
-        x = partrange.copy()
+    def evalrange(self, partrange: PartRange):
+        //x = partrange.copy()
         for rule in self.rules:
             if rule.op == '<':
-                a, b = partrange[rule.prop].split(rule.value)
+                a, b = partrange
                 if a.count():
                     pass
 
@@ -72,12 +70,62 @@ class Part:
                     out[mx.group(1)] = int(mx.group(2))
             return out
 
-@dataclass
 class PartRange:
-    data: dict[str, list[int]]
+    KEYS = ['x', 'm', 'a', 's']
 
-    def split(self, prop: str, at: int):
-        pass
+    def __init__(self, **kwargs):
+        self.data = dict()
+        for k, v in kwargs.items():
+            if k in self.__class__.KEYS:
+                self.data[k] = v
+
+    def __getitem__(self, key):
+        if key in self.__class__.KEYS:
+            return dict.__getitem__(self.data, key)
+
+    def __setitem__(self, key, val):
+        if key in self.__class__.KEYS:
+            return dict.__setitem__(self.data, key, val)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.data})"
+
+    def _filter_bad_range(self, pr):
+        for k in self.__class__.KEYS:
+            if not pr[k]:
+                return None
+        return pr
+
+    def ncombos(self):
+        out = 1
+        for k in self.__class__.KEYS:
+            it = iter(self.data[k])
+            count = 0
+            for xmin, xmax in zip(it, it):
+                count += (xmax-xmin+1)
+            out *= count
+        return out
+
+    def split(self, key, value):
+        a = PartRange()
+        b = PartRange()
+        for k in self.__class__.KEYS:
+            if k == key:
+                a[k] = []
+                b[k] = []
+                it = iter(self.data[k])
+                for xmin, xmax in zip(it, it):
+                    if value <= xmin:
+                        a[k].extend([xmin, xmax])
+                    elif xmin < value <= xmax:
+                        a[k].extend([xmin, value-1])
+                        b[k].extend([value, xmax])
+                    else:
+                        b[k].extend([xmin, xmax])
+            else:
+                a[k] = self.data[k][:]
+                b[k] = self.data[k][:]
+        return self._filter_bad_range(a), self._filter_bad_range(b)
 
 class System:
     def __init__(self, workflows, parts):
@@ -110,16 +158,15 @@ class System:
         return cls(workflows, parts)
 
 if __name__ == '__main__':
-    # parse arguments
-    parser = argparse.ArgumentParser()
-    args = parser.parse_args()
-
-    from aoc import IntervalSeq
-    inter = IntervalSeq.build([1, 10, 15, 20])
-    for i in range(0, 22):
-        a, b = inter.split(i)
-        print(a, a.count(), b, b.count())
-
-    test = System.read_file("input.txt")
-    print(test.part1())
-
+    part = PartRange(x=[1,4000], m=[1,4000], a=[1,4000], s=[1, 4000])
+    for v in [1, 2000, 4000, 4001]:
+        print(v)
+        a, b = part.split('a', v)
+        an = 0
+        if a is not None:
+            an = a.ncombos()
+        bn = 0
+        if b is not None:
+            bn = b.ncombos()
+        print(f"    {a} {an}")
+        print(f"    {b} {bn}")

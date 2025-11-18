@@ -22,15 +22,15 @@ class Point:
             raise TypeError
         return Point(self.x + other.x, self.y + other.y)
 
-    def movedir(self, dir: Dir):
+    def movedir(self, dir: Dir, d: int = 1):
         if dir == Dir.U:
-            return Point(self.x, self.y-1)
+            return Point(self.x, self.y-d)
         elif dir == Dir.R:
-            return Point(self.x+1, self.y)
+            return Point(self.x+d, self.y)
         elif dir == Dir.D:
-            return Point(self.x, self.y+1)
+            return Point(self.x, self.y+d)
         elif dir == Dir.L:
-            return Point(self.x-1, self.y)
+            return Point(self.x-d, self.y)
         else:
             raise Exception(f"bad direction {dir}")
     
@@ -75,38 +75,6 @@ class Interval:
             start = max(self.start, other.start)
             end = min(self.end, other.end)
             return Interval(start, end)
-
-@dataclass
-class IntervalSeq:
-    intervals: list[Interval]
-
-    @classmethod
-    def build(cls, xs):
-        out = []
-        it = iter(xs)
-        for x, y in zip(it, it):
-            out.append(Interval(x, y))
-        return IntervalSeq(out)
-
-    def __repr__(self):
-        return f"[{','.join(str(x) for x in self.intervals)}]"
-
-    def append(self, x: Interval):
-        self.intervals.append(x)
-
-    def count(self):
-        return sum(x.count() for x in self.intervals)
-
-    def split(self, at: int):
-        a = IntervalSeq([])
-        b = IntervalSeq([])
-        for x in self.intervals:
-            xa, xb = x.split(at)
-            if xa is not None:
-                a.append(xa)
-            if xb is not None:
-                b.append(xb)
-        return a, b
 
 def read_lines(filename):
     """Read in each line of a file as an element in a list"""
